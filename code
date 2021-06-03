@@ -1,0 +1,339 @@
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+import sys
+
+from SearchWindow import Ui_MainWindow
+
+app = QtWidgets.QApplication(sys.argv)
+MainWindow = QtWidgets.QMainWindow()
+ui = Ui_MainWindow()
+ui.setupUi(MainWindow)
+MainWindow.show()
+
+
+# logic
+class Graph:
+    def __init__(self, isDirected):
+        self.vertices = {}
+        self.heuristics = {}
+        self.isDirected = isDirected
+        self.expanded = {}
+
+    def add_vertex(self, node):
+        self.vertices[node] = {}
+        self.expanded[node] = ''
+
+    def add_heuristic(self, node, heuristic):
+        self.heuristics[node] = (node, heuristic)
+
+    def add_neighbor(self, node, neighbor, weight=0):
+        self.vertices[node][neighbor] = weight
+
+    def add_edge(self, frm, to, cost=0):
+        if frm not in self.vertices:
+            self.add_vertex(frm)
+        if to not in self.vertices:
+            self.add_vertex(to)
+
+        if not self.isDirected:
+            self.add_neighbor(frm, to, cost)
+            self.add_neighbor(to, frm, cost)
+        else:
+            self.add_neighbor(frm, to, cost)
+
+    def setExpanded(self, original, vertexID):
+        self.expanded[original] = vertexID
+
+    def getExpanded(self, original):
+        return self.expanded[original]
+
+
+def BFS(graph, source, target):
+    visited = []
+    pq = [source]
+    while len(pq):
+        if len(pq) == 0:
+            raise Exception("No way Exception")
+        u = pq.pop(0)
+        if u in target:
+            visited.append(u)
+            print("BFS traverse: ")
+            print(visited)
+            ui.outputTextBrowser.setText("BFS traverse: " + str(visited))
+            break
+
+        if u not in visited:
+            for v in graph.vertices[u].keys():
+                if (v not in visited):
+                    pq.append(v)
+
+            visited.append(u)
+
+
+def DFS(graph, source, target):
+    visited = []
+    pq = [source]
+    while len(pq):
+        if len(pq) == 0:
+            raise Exception("No way Exception")
+        u = pq.pop()
+        if u in target:
+            visited.append(u)
+            print("DFS traverse: ")
+            print(visited)
+            ui.outputTextBrowser.setText("DFS traverse: " + str(visited))
+            break
+
+        if u not in visited:
+            neighbored = reversed(list(graph.vertices[u].keys()))
+            for v in neighbored:
+                if (v not in visited):
+                    pq.append(v)
+
+            visited.append(u)
+
+
+def uniform_cost_search(graph, source, target):
+    visited = []
+    pq = [(source, 0)]
+    while len(pq):
+        if len(pq) == 0:
+            raise Exception("No way Exception")
+        pq.sort(key=lambda tup: tup[1])
+        u = pq.pop(0)
+        if u[0] in target:
+            visited.append(u[0])
+            print("UCS traverse: ")
+            print(visited)
+            ui.outputTextBrowser.setText("UCS traverse: " + str(visited))
+            break
+
+        if (u[0] not in visited):
+            for v in graph.vertices[u[0]].keys():
+                if (v not in visited):
+                    # graph.setExpanded(v, u[0])
+                    pq.append((v, graph.vertices[u[0]][v] + u[1]))
+            visited.append(u[0])
+
+
+def best_first_search(graph, source, target):
+    visited = []
+    pq = [graph.heuristics[source]]
+    while len(pq):
+        if len(pq) == 0:
+            raise Exception("No way Exception")
+        pq.sort(key=lambda tup: tup[1])
+        u = pq.pop(0)
+        if u[0] in target:
+            """  if u want final path
+            path = [u[0]]
+            point = graph.getExpanded(u[0])
+            while point != source:
+                path.append(point)
+                point = graph.getExpanded(point)
+            path.append(point)
+            path.reverse()
+            print("final: ")
+            print(path)
+            """
+            visited.append(u[0])
+            print("Greedy traverse: ")
+            print(visited)
+            ui.outputTextBrowser.setText("Greedy traverse: " + str(visited))
+            break
+
+        if (u[0] not in visited):
+            for v in graph.vertices[u[0]].keys():
+                if (v not in visited):
+                    pq.append(graph.heuristics[v])
+                    graph.setExpanded(v, u[0])
+            visited.append(u[0])
+
+
+def A_star_search(graph, source, target):
+    visited = []
+    pq = [graph.heuristics[source]]
+    while len(pq):
+        if len(pq) == 0:
+            raise Exception("No way Exception")
+        pq.sort(key=lambda tup: tup[1])
+        u = pq.pop(0)
+        if u[0] in target:
+            """
+            path = [u[0]]
+            point = graph.getExpanded(u[0])
+            while point != source:
+                path.append(point)
+                point = graph.getExpanded(point)
+            path.append(point)
+            path.reverse()
+            """
+            visited.append(u[0])
+            print("A* traverse: ")
+            print(visited)
+            ui.outputTextBrowser.setText("A* traverse: " + str(visited))
+            break
+
+        if (u[0] not in visited):
+            for v in graph.vertices[u[0]].keys():
+                if (v not in visited):
+                    pq.append((v, graph.heuristics[v][1] + graph.vertices[u[0]][v] + u[1] -
+                               graph.heuristics[u[0]][1]))
+            visited.append(u[0])
+
+
+# screens
+def vertexSC():
+    v1 = ui.lineEdit_2.text()
+    h1 = ui.lineEdit_3.text()
+    ui.vertexTextBrowser.setText(
+        ui.vertexTextBrowser.toPlainText() + "\n" + "Vertex: " + v1 + " , Heuristic: " + h1)
+    ui.lineEdit_2.setText("")
+    ui.lineEdit_3.setText("")
+
+
+def edgeSC():
+    vf1 = ui.lineEdit_4.text()
+    vt1 = ui.lineEdit_6.text()
+    c1 = ui.lineEdit_8.text()
+    ui.EdgesTextBrowser.setText(
+        ui.EdgesTextBrowser.toPlainText() + "\n" + "Edge : " + vf1 + " -> " + vt1 + " cost : " + c1)
+    ui.lineEdit_4.setText("")
+    ui.lineEdit_6.setText("")
+    ui.lineEdit_8.setText("")
+
+
+# inputs
+def radio():
+    global d
+    global un
+    d = ui.radioButton.text()
+    un = ui.radioButton_2.text()
+
+
+def noVertex():
+    global numv
+    numv = int(ui.lineEdit.text())
+
+
+def noEdges():
+    global nume
+    nume = int(ui.lineEdit_7.text())
+
+
+def vertexInfo():
+    global v2
+    global h
+    v2 = ui.lineEdit_2.text()
+    h = int(ui.lineEdit_3.text())
+
+
+def edgesInfo():
+    global vf
+    global vt
+    global c
+    vf = ui.lineEdit_4.text()
+    vt = ui.lineEdit_6.text()
+    c = int(ui.lineEdit_8.text())
+
+
+def setGoal():
+    global s
+    global g5
+    s = ui.lineEdit_5.text()
+    g5 = list(ui.lineEdit_9.text().split(" "))
+
+
+# process
+def directed():
+    global g
+    isDirected = 'd'
+    g = Graph(True)
+    print("directed")
+
+
+def undirected():
+    global g
+    isDirected = 'un'
+    g = Graph(False)
+    print("UNdirected")
+
+
+def addVertex():
+    noVertex()
+    vertexInfo()
+    vertexSC()
+    no_vertices = numv
+    #for i in range(no_vertices):
+    #print("enter vertex " + str(i))
+    print("enter vertex:")
+    vertex = v2
+    g.add_vertex(vertex)
+    print(vertex)
+    print("add heuristic for vertex")
+    print(h)
+    g.add_heuristic(vertex, h)
+
+
+def addEdges():
+    edgesInfo()
+    edgeSC()
+    no_edges = nume
+    #for i in range(no_edges):
+    print("enter vertex from: ")
+    frm = vf
+    print(vf)
+    print("Enter vertex to: ")
+    to = vt
+    print(vt)
+    print("enter cost: ")
+    cost = c
+    print(c)
+    g.add_edge(frm, to, cost)
+
+
+def bfsSearch():
+    #directed()
+    #undirected()
+    BFS(g, s, g5)
+
+
+def dfsSearch():
+    #directed()
+    #undirected()
+    DFS(g, s, g5)
+
+
+def ucsSearch():
+    #directed()
+    #undirected()
+    uniform_cost_search(g, s, g5)
+
+
+def greedySearch():
+    #directed()
+    #undirected()
+    best_first_search(g, s, g5)
+
+
+def astarSearch():
+    #directed()
+    #undirected()
+    A_star_search(g, s, g5)
+
+
+# controls Actions
+ui.radioButton.clicked.connect(directed)
+ui.radioButton_2.clicked.connect(undirected)
+ui.enterBtn.clicked.connect(noVertex)
+ui.addBtn.clicked.connect(noEdges)
+ui.addVertexBtn.clicked.connect(addVertex)
+ui.addEdgesBtn.clicked.connect(addEdges)
+ui.pushButton.clicked.connect(setGoal)
+ui.bfsBtn.clicked.connect(bfsSearch)
+ui.dfsBtn.clicked.connect(dfsSearch)
+ui.greedyBtn.clicked.connect(greedySearch)
+ui.ucsBtn.clicked.connect(ucsSearch)
+ui.astarBtn.clicked.connect(astarSearch)
+
+sys.exit(app.exec_())
